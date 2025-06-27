@@ -124,6 +124,10 @@ const ProcessTree = function(taskRecord, groupContainer = null, listContainer = 
         },
     );
 
+    container.render = function(){
+        render();
+    }
+
     // Rendering functions
     function renderGroup(){
 
