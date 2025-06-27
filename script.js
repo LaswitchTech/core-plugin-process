@@ -124,6 +124,10 @@ const ProcessTree = function(taskRecord, groupContainer = null, listContainer = 
         },
     );
 
+    container.render = function(){
+        render();
+    }
+
     // Rendering functions
     function renderGroup(){
 
@@ -899,7 +903,8 @@ const ProcessEditor = function(process, container){
                                             "isDisabled": false,
                                             "onComplete": null,
                                             "description": null,
-                                            "isCompleted": false
+                                            "isCompleted": false,
+                                            "cost": 0.00,
                                         };
 
                                         // Loop through the task's details to sanitize the values
@@ -993,7 +998,7 @@ const ProcessEditor = function(process, container){
                                                         for(const [key, value] of Object.entries(taskItem.task)){
 
                                                             // Check if the key is in the list of keys to ignore
-                                                            if(jQuery.inArray(key, ["name","description","onComplete","value","isDisabled"]) !== -1){
+                                                            if(jQuery.inArray(key, ["name","description","onComplete","value","isDisabled","cost"]) !== -1){
 
                                                                 // Create the corresponding field
                                                                 switch(key){
@@ -1020,6 +1025,22 @@ const ProcessEditor = function(process, container){
                                                                                 modal: componentModal,
                                                                                 value: value,
                                                                             },
+                                                                        );
+                                                                        break;
+                                                                    case 'cost':
+                                                                        form.add(
+                                                                            {
+                                                                                name: key,
+                                                                                label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+                                                                                icon: 'currency-dollar',
+                                                                                type: 'number',
+                                                                                value: value,
+                                                                            },
+                                                                            function(input){
+                                                                                input.input.attr('step', '0.01');
+                                                                                input.input.attr('min', '0');
+                                                                                input.input.attr('max', '24');
+                                                                            }
                                                                         );
                                                                         break;
                                                                     default:
