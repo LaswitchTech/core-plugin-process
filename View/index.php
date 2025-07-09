@@ -1,14 +1,8 @@
-<!--
-  Core Framework - View File
-
-  @license    MIT (https://mit-license.org/)
-  @author     Louis Ouellet <louis@laswitchtech.com>
--->
 <div class="col-12" id="layout"></div>
 <script>
     $(document).ready(function(){
         $.ajax({
-            url: '/endpoint.php/process/index',
+            url: '/api/process/index',
             type: 'GET',dataType: 'json',
             error: function(xhr, status, error) {
                 let color = 'info', icon = 'question-circle', title = builder.Locale.get(xhr.statusText), content = builder.Locale.get(xhr.responseText);

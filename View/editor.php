@@ -1,15 +1,8 @@
-<!--
-  Core Framework - View File
-
-  @license    MIT (https://mit-license.org/)
-  @author     Full Name <user@domain.com>
--->
-
 <div class="col-12" id="layout"></div>
 <script>
     $(document).ready(function(){
         $.ajax({
-            url: '/endpoint.php/process/fetch?id=<?= $this->Request->getParams('GET', 'id') ?>',
+            url: '/api/process/fetch?id=<?= $this->Request->getParams('GET', 'id') ?>',
             type: 'GET',dataType: 'json',
             error: function(xhr, status, error) {
                 let color = 'info', icon = 'question-circle', title = builder.Locale.get(xhr.statusText), content = builder.Locale.get(xhr.responseText);

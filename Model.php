@@ -1,178 +1,150 @@
 <?php
 
-/**
- * Core Framework - ProcessModel
- *
- * @license    MIT (https://mit-license.org/)
- * @author     Louis Ouellet <louis@laswitchtech.com>
- */
-
 // Import additionnal class into the global namespace
-use \LaswitchTech\Core\Abstracts\Model;
+use \LaswitchTech\Core\Base\BaseModel;
 
-class ProcessModel extends Model {
+class ProcessModel extends BaseModel {
 
     /**
-     * Retrieve all the processes
-     *
-     * @return array
+     * Constructor
      */
-    public function fetchAll(): array
+    public function __construct()
     {
-        // Create the Query
-        $Query = $this->Database->query()
-            ->table('processes')
-            ->select('*')
-            ->join('owner', 'users', 'username')
-            ->filter()
-            ->where('id', 9999, '<>');
+        // Call the parent constructor
+        parent::__construct();
 
-        // Retrieve the Results
-        $result = $Query->result();
-
-        // Decode JSON Fields
-        foreach($result as $key => $record){
-            $result[$key]['process'] = json_decode($record['process'] ?? '[]', true);
-        }
-
-        // Return the Results
-        return $result;
+        // Initialize the Model
+        $this->init('processes');
     }
 
     /**
-     * Retrieve a process by ID
+     * Retrieve multiple records
      *
+     * @param array $conditions
+     * @return array
+     */
+    public function fetchAll(array $conditions = [], string $conjunction = 'AND'): array
+    {
+        // Create the Query
+        $Query = $this->Database->query()
+            ->table($this->table)
+            ->select('*')
+            ->join('owner', 'users', 'username')
+            ->join('organization', 'organizations', 'id')
+            ->filter()
+            ->where('id', 9999, '<>')
+            ->where('organization', $this->Auth->user()->organization()->id);
+
+        // Check if the conditions are empty
+        if(!empty($conditions)){
+
+            // Add a Filter
+            $Query->filter();
+
+            // Add the Conditions
+            foreach($conditions as $key => $condition){
+
+                // Check if the key exists in the definition
+                if(!array_key_exists($condition['key'], $this->definition)){
+
+                    // Remove the key from the data
+                    unset($conditions[$key]);
+                    continue;
+                }
+
+                // Add the condition to the Query
+                $Query->where($condition["key"], $condition["value"], $condition["operator"], $conjunction);
+            }
+        }
+
+        // Retrieve the Results
+        $records = $Query->fetch();
+
+        // Loop through the records to process them
+        foreach($records as $key => $record){
+
+            // Overwrite the record with the processed one
+            $records[$key] = $this->process($record);
+        }
+
+        // Return the Results
+        return $records;
+    }
+
+    /**
+     * Retrieve a single record
+     *
+     * @param int $id
      * @return array
      */
     public function fetch(int $id): array
     {
         // Create the Query
         $Query = $this->Database->query()
-            ->table('processes')
+            ->table($this->table)
             ->select('*')
             ->join('owner', 'users', 'username')
-            ->limit(1)
+            ->join('organization', 'organizations', 'id')
             ->filter()
             ->where('id', 9999, '<>')
-            ->where('id', $id);
+            ->filter()
+            ->where($this->primary, $id)
+            ->limit(1);
 
-        // Retrieve the Results
-        $result = $Query->result();
+        // Retrieve the record
+        $records = $Query->fetch();
 
-        // Decode JSON Fields
-        foreach($result as $key => $record){
-            $result[$key]['process'] = json_decode($record['process'] ?? '[]', true);
+        // Loop through the records to process them
+        foreach($records as $key => $record){
+
+            // Overwrite the record with the processed one
+            $records[$key] = $this->process($record);
         }
 
-        // Return the Results
-        return $result[array_key_first($result)] ?? [];
+        // Return the record or an empty array if not found
+        return $records[array_key_first($records)] ?? [];
     }
 
     /**
-     * Retrieve metadata for a process
+     * Retrieve a single record by target Table
      *
+     * @param string $table
+     * @param string|null $category
      * @return array
      */
-    public function meta(): array
+    public function fetchByTable(string $table, ?string $category = null): array
     {
-        // Initialize the options
-        $options = [
-            "targetTable" => [],
-            "category" => [],
-        ];
-
-        // Loop through all the tables
-        foreach($this->Database->schema()->tables() as $table){
-            $options['targetTable'][] = ["id" => $table, "text" => ucwords($table)];
-        }
-
         // Create the Query
         $Query = $this->Database->query()
-            ->table('categories')
+            ->table($this->table)
             ->select('*')
+            ->join('owner', 'users', 'username')
+            ->join('organization', 'organizations', 'id')
             ->filter()
             ->where('id', 9999, '<>')
-            ->where('targetTable', 'processes');
+            ->where('organization', $this->Auth->user()->organization()->id)
+            ->filter()
+            ->where('targetTable', $table)
+            ->limit(1);
 
-        // Retrieve the Results
-        $result = $Query->fetch();
+        // Check if a category is provided
+        if($category && !empty($category)){
 
-        // Loop through all the categories
-        foreach($result as $key => $record){
-            $options['category'][] = ["id" => $record['name'], "text" => ucwords($record['name'])];
+            // Add the category condition
+            $Query->where('category', $category);
         }
 
-        // Return the options
-        return $options;
-    }
+        // Retrieve the record
+        $records = $Query->fetch();
 
-    /**
-     * Retrieve the first process associated with a table
-     *
-     * @param string $category
-     * @return array
-     */
-    public function get(string $category): array
-    {
-        // Initialize the Result
-        $result = [];
+        // Loop through the records to process them
+        foreach($records as $key => $record){
 
-        // Create the Query
-        $Query = $this->Database->query()
-            ->table('processes')
-            ->select('*')
-            ->limit(1)
-            ->where('id', 9999, '<>')
-            ->where('category', $category);
-
-        // Retrieve the Results
-        $result = $Query->fetch();
-
-        // Decode JSON Fields
-        foreach($result as $key => $record){
-            $result[$key]['process'] = json_decode($record['process'] ?? '[]', true);
+            // Overwrite the record with the processed one
+            $records[$key] = $this->process($record);
         }
 
-        // Return the first Result
-        return $result[0] ?? [];
-    }
-
-    /**
-     * Create a new Process and return the id
-     *
-     * @param array $data
-     * @return int
-     */
-    public function create(array $data): int
-    {
-        // Create the Query
-        $Query = $this->Database->query()
-            ->table('processes')
-            ->insert($data);
-
-        // Execute the Query
-        $affectedRows = $Query->execute();
-
-        // Execute the Query
-        return $Query->lastId();
-    }
-
-    /**
-     * Update a Process
-     *
-     * @param int $id
-     * @param array $data
-     * @return int
-     */
-    public function update(int $id, array $data): int
-    {
-        // Create the Query
-        $Query = $this->Database->query()
-            ->table('processes')
-            ->update($data)
-            ->where('id', $id);
-
-        // Execute the Query
-        return $Query->execute();
+        // Return the record or an empty array if not found
+        return $records[array_key_first($records)] ?? [];
     }
 }

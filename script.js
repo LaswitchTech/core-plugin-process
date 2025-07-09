@@ -1,10 +1,3 @@
-//
-//   Core Framework - Script file
-//
-//   @license    MIT (https://mit-license.org/)
-//   @author     Louis Ouellet <louis@laswitchtech.com>
-//
-
 // Create a Process Tree
 const ProcessTree = function(taskRecord, groupContainer = null, listContainer = null){
 
@@ -196,6 +189,10 @@ const ProcessTree = function(taskRecord, groupContainer = null, listContainer = 
             // Set background color and cursor
             item.addClass(color).addClass(cursor);
 
+            // Sanitize the booleans
+            process[order].tasks[task].isDisabled = $.inArray(process[order].tasks[task].isDisabled, [1, '1', true, 'true']) !== -1;
+            process[order].tasks[task].isCompleted = $.inArray(process[order].tasks[task].isCompleted, [1, '1', true, 'true']) !== -1;
+
             // on hover Add bg-secondary to the item
             item.off('hover').hover(
                 function(){
@@ -292,6 +289,9 @@ const ProcessTree = function(taskRecord, groupContainer = null, listContainer = 
     // Function to attempt to complete a task
     function complete(order, task){
 
+        // Sanitize the booleans
+        process[order].tasks[task].isCompleted = $.inArray(process[order].tasks[task].isCompleted, [1, '1', true, 'true']) !== -1;
+
         // Check if the prior tasks are completed
         if(task > 1 && !process[order].tasks[task - 1].isCompleted){
             return;
@@ -379,14 +379,12 @@ const ProcessTree = function(taskRecord, groupContainer = null, listContainer = 
 
     // Function to save the process tree
     function save(){
-        let data = {
-            process: process,
-        };
-        data[CSRF_KEY] = CSRF_TOKEN;
+        console.log(process,current);
         $.ajax({
-            url: '/endpoint.php/tasks/process?id=' + taskRecord.id,
+            url: '/api/tasks/update?id=' + taskRecord.id,
+            headers: {'X-CSRF-Authorization': CSRF_KEY},
             type: 'POST',dataType: 'json',
-            data: data,
+            data: {process: process, progress: current},
             success: function(response) {
 
                 // Render the list
@@ -447,7 +445,7 @@ const ProcessDetails = function(process, container){
 
         // AJAX Request
         $.ajax({
-            url: '/endpoint.php/process/meta',
+            url: '/api/process/meta',
             type: 'GET',dataType: 'json',
             success: function(response) {
 
@@ -488,15 +486,11 @@ const ProcessDetails = function(process, container){
 
                                         // AJAX Request
                                         $.ajax({
-                                            url: '/endpoint.php/process/update?id=' + process.id,
+                                            url: '/api/process/update?id=' + process.id,
                                             headers: {'X-CSRF-Authorization': CSRF_KEY},
                                             type: 'POST',dataType: 'json',
                                             data: form.val(),
                                             success: function(response) {
-
-                                                // Update CSRF Token
-                                                CSRF_KEY = response.CSRF.key;
-                                                CSRF_TOKEN = response.CSRF.token;
 
                                                 // Loop through the process to update the details
                                                 for(const [key, value] of Object.entries(response.record)){
@@ -706,15 +700,11 @@ const ProcessEditor = function(process, container){
 
                             // AJAX Request
                             $.ajax({
-                                url: '/endpoint.php/process/update?id=' + process.id,
+                                url: '/api/process/update?id=' + process.id,
                                 headers: {'X-CSRF-Authorization': CSRF_KEY},
                                 type: 'POST',dataType: 'json',
                                 data: {process: processJSON},
                                 success: function(response) {
-
-                                    // Update CSRF Token
-                                    CSRF_KEY = response.CSRF.key;
-                                    CSRF_TOKEN = response.CSRF.token;
 
                                     // Close the modal
                                     modal.hide();
@@ -757,7 +747,7 @@ const ProcessEditor = function(process, container){
 
                                                         // AJAX Request
                                                         $.ajax({
-                                                            url: '/endpoint.php/tasks/upgrade?category=' + process.category,
+                                                            url: '/api/tasks/upgrade?category=' + process.category,
                                                             type: 'GET',dataType: 'json',
                                                             success: function(response) {
                                                                 console.log(response);
