@@ -85,6 +85,7 @@ class ProcessModel extends BaseModel {
             ->select('*')
             ->join('owner', 'users', 'username')
             ->join('organization', 'organizations', 'id')
+            ->index($this->primary)
             ->filter()
             ->where('id', 9999, '<>')
             ->filter()

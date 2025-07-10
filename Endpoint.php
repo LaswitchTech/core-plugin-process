@@ -3,7 +3,7 @@
 // Import additionnal class into the global namespace
 use \LaswitchTech\Core\Base\BaseEndpoint;
 
-class ProcessesEndpoint extends BaseEndpoint {
+class ProcessEndpoint extends BaseEndpoint {
 
     /**
      * Constructor
@@ -15,6 +15,7 @@ class ProcessesEndpoint extends BaseEndpoint {
 
         // Initialize the Endpoint
         $this->init('processes');
+        $this->name = 'Process';
 
         // Set Properties
         $this->required = ['name'];
