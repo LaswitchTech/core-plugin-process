@@ -2,8 +2,10 @@
 <script>
     $(document).ready(function(){
         $.ajax({
-            url: '/api/process/index',
-            type: 'GET',dataType: 'json',
+            url: '/api/process/fetchAll',
+            headers: {'X-CSRF-Authorization': CSRF_KEY},
+            type: 'POST',dataType: 'json',
+            data: {},
             error: function(xhr, status, error) {
                 let color = 'info', icon = 'question-circle', title = builder.Locale.get(xhr.statusText), content = builder.Locale.get(xhr.responseText);
                 switch(xhr.status){
@@ -14,6 +16,11 @@
                 builder.Component("alert","#layout",{icon:icon,color:color,title:title},function(alert,component){component.content.html('<pre class="m-0 p-2">'+content+'</pre>');});
             },
             success: function(response) {
+
+                // Configure Storage
+                builder.Storage.setKey('processes:index');
+                builder.Storage.set(response);
+                console.log(builder.Storage.get())
 
                 // Set Actions
                 var actions = {
@@ -28,16 +35,16 @@
 
                 // Set Buttons
                 var buttons = [
-                    {
-                        className : 'btn-success',
-                        init: function (dt, node){
-                            $(node).removeClass('btn-secondary');
-                        },
-                        text: '<i class="bi bi-plus-lg me-2"></i>'+builder.Locale.get('Create'),
-                        action:function(e, dt, node, config){
-                            ProcessModalCreate(dt);
-                        },
-                    },
+                    // {
+                    //     className : 'btn-success',
+                    //     init: function (dt, node){
+                    //         $(node).removeClass('btn-secondary');
+                    //     },
+                    //     text: '<i class="bi bi-plus-lg me-2"></i>'+builder.Locale.get('Create'),
+                    //     action:function(e, dt, node, config){
+                    //         ProcessModalCreate(dt);
+                    //     },
+                    // },
                 ];
 
                 // Layout
@@ -93,7 +100,7 @@
                         component.table._component.table.addClass('z-2');
 
                         // Add Records to Layout
-                        for(const [key, record] of Object.entries(response)){
+                        for(const [key, record] of Object.entries(builder.Storage.get('records'))){
                             layout.add(record);
                         }
                     },

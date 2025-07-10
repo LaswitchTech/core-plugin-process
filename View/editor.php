@@ -14,7 +14,11 @@
                 builder.Component("alert","#layout",{icon:icon,color:color,title:title},function(alert,component){component.content.html('<pre class="m-0 p-2">'+content+'</pre>');});
             },
             success: function(response) {
-                console.log(response);
+
+                // Configure Storage
+                builder.Storage.setKey('process:'+response.record.id);
+                builder.Storage.set(response);
+                console.log(builder.Storage.get())
 
                 // Layout
                 let Layout = $(document.createElement('div')).addClass('row g-3').appendTo('#layout');
@@ -35,7 +39,7 @@
                         component.body.removeClass('card-body');
 
                         // Create a table to display the details
-                        ProcessDetails(response,component.body);
+                        ProcessDetails(builder.Storage.get('record'),component.body);
                     },
                 );
 
@@ -54,7 +58,7 @@
                         component.body.removeClass('card-body');
 
                         // Create a table to display the details
-                        ProcessEditor(response,component.body);
+                        ProcessEditor(builder.Storage.get('record'),component.body);
                     },
                 );
             },
