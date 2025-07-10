@@ -747,7 +747,7 @@ const ProcessEditor = function(process, container){
 
                                                         // AJAX Request
                                                         $.ajax({
-                                                            url: '/api/tasks/upgrade?category=' + process.category,
+                                                            url: '/api/tasks/upgrade?id=' + process.id,
                                                             type: 'GET',dataType: 'json',
                                                             success: function(response) {
                                                                 console.log(response);

@@ -153,18 +153,10 @@ class ProcessEndpoint extends BaseEndpoint {
                     'message' => 'Process Updated by <vcard>'.$this->Auth->user()->vcard['id'].':'.$this->Auth->user()->username.'</vcard>',
                     'icon' => 'circle',
                     'color' => 'secondary',
-                    'link' => '/plugin/processes/details?id='.$message['data']['record']['id'].'&name='.urlencode($message['data']['record']['vcard']['name']),
+                    'link' => '/plugin/processes/details?id='.$message['data']['record']['id'],
                     'targetTable' => 'processes',
                     'targetId' => $message['data']['record']['id'],
                 ];
-
-                // Create the event
-                $message['data']['event'][] = $this->Model->Event->create($event);
-
-                // Setup a new event for the target
-                $event['link'] = '/plugin/'.$message['data']['record']['targetTable'].'/details?id='.$message['data']['record']['targetId'];
-                $event['targetTable'] = $message['data']['record']['targetTable'];
-                $event['targetId'] = $message['data']['record']['targetId'];
 
                 // Create the event
                 $message['data']['event'][] = $this->Model->Event->create($event);
@@ -198,7 +190,7 @@ class ProcessEndpoint extends BaseEndpoint {
                     'message' => 'Process Deleted by <vcard>'.$this->Auth->user()->vcard['id'].':'.$this->Auth->user()->username.'</vcard>',
                     'icon' => 'circle',
                     'color' => 'secondary',
-                    'link' => '/plugin/processes/details?id='.$message['data']['record']['id'].'&name='.urlencode($message['data']['record']['vcard']['name']),
+                    'link' => '/plugin/processes/details?id='.$message['data']['record']['id'],
                     'targetTable' => 'processes',
                     'targetId' => $message['data']['record']['id'],
                 ];
