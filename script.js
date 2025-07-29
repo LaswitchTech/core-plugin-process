@@ -468,7 +468,7 @@ const ProcessDetails = function(process, container){
                         const componentModal = component;
 
                         // Styling
-                        component.header.addClass('text-bg-warning');
+                        component.addClass('modal-warning');
                         component.footer.submit.text('Apply changes').addClass('btn-success').removeClass('btn-link');
                         component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-circle me-1').prependTo(component.footer.submit);
 
@@ -766,7 +766,7 @@ const ProcessEditor = function(process, container){
                                             const componentModal = component;
 
                                             // Style the modal
-                                            component.header.addClass('text-bg-warning');
+                                            component.addClass('modal-warning');
                                             component.footer.submit.addClass('btn-warning').removeClass('btn-link').attr({
                                                 "style": "border-bottom-right-radius: var(--bs-modal-inner-border-radius) !important;border-bottom-left-radius: var(--bs-modal-inner-border-radius) !important;",
                                             }).text(builder.Locale.get('Apply Changes'));
@@ -788,7 +788,7 @@ const ProcessEditor = function(process, container){
                 const componentModal = component;
 
                 // Style the modal
-                component.header.addClass('text-bg-success');
+                component.addClass('modal-success');
                 component.footer.submit.addClass('btn-success').removeClass('btn-link').attr({
                     "style": "border-bottom-right-radius: var(--bs-modal-inner-border-radius) !important;border-bottom-left-radius: var(--bs-modal-inner-border-radius) !important;",
                 }).text(builder.Locale.get('Save Changes'));
@@ -949,7 +949,7 @@ const ProcessEditor = function(process, container){
                                                 const componentModal = component;
 
                                                 // Styling
-                                                component.header.addClass('text-bg-warning');
+                                                component.addClass('modal-warning');
                                                 component.footer.submit.text('Apply changes').addClass('btn-success').removeClass('btn-link');
                                                 component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-circle me-1').prependTo(component.footer.submit);
 
@@ -1227,7 +1227,7 @@ const ProcessEditor = function(process, container){
                                     const componentModal = component;
 
                                     // Styling
-                                    component.header.addClass('text-bg-warning');
+                                    component.addClass('modal-warning');
                                     component.footer.submit.text('Apply changes').addClass('btn-success').removeClass('btn-link');
                                     component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-circle me-1').prependTo(component.footer.submit);
 
