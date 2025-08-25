@@ -32,6 +32,9 @@ class ProcessEndpoint extends BaseEndpoint {
         // Check if the records is accessible
         if($message['status'] == 200){
 
+            // Retrieve the list of tables
+            $message['data']['dependencies']['tables'] = $this->Model->Core->tables();
+
             // Check if the Relationship Plugin is accessible
             if($this->Helper->Core->isInstalled('relationship')){
                 $message['data']['dependencies']['relationship'] = $this->Model->Relationship->get($this->basename, $message['data']['record']['id']);
