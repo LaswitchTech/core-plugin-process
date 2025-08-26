@@ -18,6 +18,24 @@ class ProcessModel extends BaseModel {
     }
 
     /**
+     * Process a record
+     *
+     * @param array $record
+     * @return array
+     */
+    protected function process(array $record): array
+    {
+        // Call the parent constructor
+        $record = parent::process($record);
+
+        // Decode the process
+        $record['process'] = json_decode($record['process'] ?? "[]", true);
+
+        // Return the processed record
+        return $record;
+    }
+
+    /**
      * Retrieve multiple records
      *
      * @param array $conditions
