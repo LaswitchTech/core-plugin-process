@@ -29,7 +29,9 @@ class ProcessModel extends BaseModel {
         $record = parent::process($record);
 
         // Decode the process
-        $record['process'] = json_decode($record['process'] ?? "[]", true);
+        if(!is_array($record['process'])){
+            $record['process'] = json_decode($record['process'] ?? "[]", true);
+        }
 
         // Return the processed record
         return $record;
