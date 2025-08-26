@@ -1185,10 +1185,10 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
 
                         // AJAX Request
                         $.ajax({
-                            url: '/api/tasks/upgrade?id=' + process.id,
+                            url: '/api/tasks/upgrade?id=' + self._properties.data,
                             type: 'GET',dataType: 'json',
                             error: function(xhr, status, error) {
-                                console.error('Error updating process:', error);
+                                console.error('Error updating tasks:', error);
                             },
                             success: function(response) {
 
