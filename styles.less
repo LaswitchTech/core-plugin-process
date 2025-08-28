@@ -1,3 +1,38 @@
+.processTree {
+    .processTree-list {
+        .processTree-list-item {
+            border-radius: var(--bs-border-radius);
+            border: none;
+            margin-top: var(--bs-spacer-1);
+            margin-bottom: var(--bs-spacer-1);
+            background-color: var(--bs-tertiary-bg);
+            cursor: pointer;
+            transition: .3s ease;
+
+            &.disable {
+                background-color: transparent;
+                cursor: not-allowed;
+            }
+
+            &.done {
+                background-color: var(--bs-success);
+                color: var(--bs-body-bg);
+                cursor: default;
+
+                &:hover {
+                    background-color: var(--bs-success-text-emphasis);
+                }
+            }
+
+            &:not(.disable):hover {
+                background-color: var(--bs-secondary-bg);
+                transform: translateX(-4px);
+                box-shadow: var(--bs-box-shadow);
+            }
+        }
+    }
+}
+
 .processEditor-widget {
     .process-grid {
         // background-color: var(--bs-body-bg);

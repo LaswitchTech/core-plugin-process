@@ -33,7 +33,7 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
         // Create Component
         this._component = $(document.createElement('div')).attr({
             'id': 'process' + this._id,
-            'class': '',
+            'class': 'processTree',
         });
         this._component.id = this._component.attr('id');
 
@@ -136,6 +136,9 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
                                 'list',
                                 itemStep.content,
                                 {
+                                    class: {
+                                        component: 'processTree-list',
+                                    },
                                     icon: "square",
                                 },
                                 function(list, component){
@@ -150,7 +153,7 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
                                         // Add the task to the list
                                         list.add(
                                             {
-                                                class: 'rounded border-0 my-1',
+                                                class: 'processTree-list-item',
                                                 field: builder.Locale.get(taskData.name),
                                                 click: null,
                                                 tooltip: taskData.description,
@@ -212,7 +215,7 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
                 const taskData = this._task.process[stepOrder].tasks[taskOrder];
 
                 if(taskData.isDisabled){
-                    task.addClass('cursor-not-allowed bg-transparent');
+                    task.addClass('disable');
                     self.#exec(stepOrder, taskOrder, taskData.onComplete);
                     if(!self._initialized && taskData.emphasize){
                         task.click(function(e){
@@ -222,12 +225,6 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
                         });
                     }
                 } else {
-                    task.addClass('cursor-pointer text-bg-gray-200');
-                    task.hover(function(){
-                        $(this).removeClass('text-bg-gray-200').addClass('text-bg-gray-300');
-                    }, function(){
-                        $(this).removeClass('text-bg-gray-300').addClass('text-bg-gray-200');
-                    });
                     if(!self._initialized){
                         task.click(function(e){
                             e.preventDefault();
@@ -239,8 +236,8 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
 
                 if(taskData.isCompleted){
                     task.icon.removeClass('bi-square').addClass('bi-check-square');
-                    task.removeClass('cursor-not-allowed cursor-pointer bg-transparent text-bg-gray-200').addClass('text-bg-success');
-                    task.off('click').off('hover');
+                    task.addClass('done');
+                    task.off('click');
                     self.#currentTask = (parseInt(taskOrder) + 1);
                     if(self.#currentTask > tasksLength){
                         self.#currentTask = 1;
