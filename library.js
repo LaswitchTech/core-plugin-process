@@ -357,6 +357,7 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
                         if(tasksLength === parseInt(task)){
                             self._task.process[step].isCompleted = true;
                             self._task.progress = (parseInt(step) + 1);
+                            self._task.progress = (self._task.progress > stepsLength) ? stepsLength : self._task.progress;
                             self.#currentStep = self._task.progress;
                         }
                         self.save();
@@ -366,6 +367,7 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
                     if(tasksLength === parseInt(task)){
                         this._task.process[step].isCompleted = true;
                         this._task.progress = (parseInt(step) + 1);
+                        this._task.progress = (this._task.progress > stepsLength) ? stepsLength : this._task.progress;
                         this.#currentStep = this._task.progress;
                     }
                     this.save();
