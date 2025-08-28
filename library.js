@@ -639,7 +639,28 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                         callback: {
                             val: function(values){
                                 self._component.grid.col2.stage.form.submit();
-                                values.process = self._process;
+                                self._component.grid.col2.task.form.submit();
+                                values.description = values.description ?? null;
+                                for(const [sorder, stage] of Object.entries(self._process)){
+                                    stage.name = (stage.name === '') ? null : stage.name;
+                                    stage.description = (stage.description === '') ? null : stage.description;
+                                    stage.color = (stage.color === '') ? null : stage.color;
+                                    stage.icon = (stage.icon === '') ? null : stage.icon;
+                                    stage.isCompleted = (stage.isCompleted === true || stage.isCompleted === 1 || stage.isCompleted === '1' || stage.isCompleted === 'true') ? true : false;
+                                    for(const [torder, task] of Object.entries(stage.tasks)){
+                                        task.name = (task.name === '') ? null : task.name;
+                                        task.description = (task.description === '') ? null : task.description;
+                                        task.value = (task.value === '') ? null : task.value;
+                                        task.emphasize = (task.emphasize === '') ? null : task.emphasize;
+                                        task.onComplete = (task.onComplete === '') ? null : task.onComplete;
+                                        task.cost = parseInt(task.cost);
+                                        task.isCompleted = (task.isCompleted === true || task.isCompleted === 1 || task.isCompleted === '1' || task.isCompleted === 'true') ? true : false;
+                                        task.isDisabled = (task.isDisabled === true || task.isDisabled === 1 || task.isDisabled === '1' || task.isDisabled === 'true') ? true : false;
+                                        stage.tasks[torder] = task;
+                                    }
+                                    self._process[sorder] = stage;
+                                }
+                                values.process = JSON.stringify(self._process);
                                 return values;
                             },
                             submit: function(form){
@@ -814,6 +835,13 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                                             component: 'row g-3',
                                         },
                                         callback: {
+                                            val: function(values){
+                                                values.name = values.name ?? null;
+                                                values.description = values.description ?? null;
+                                                values.color = values.color ?? null;
+                                                values.icon = values.icon ?? null;
+                                                return values;
+                                            },
                                             submit: function(form){
                                                 for(const [key, value] of Object.entries(form.val())){
                                                     self._process[self._current.stage][key] = value;
@@ -938,6 +966,15 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                                                     component: 'row g-3',
                                                 },
                                                 callback: {
+                                                    val: function(values){
+                                                        values.name = values.name ?? null;
+                                                        values.description = values.description ?? null;
+                                                        values.onComplete = values.onComplete ?? null;
+                                                        values.value = values.value ?? null;
+                                                        values.cost = parseInt(values.cost);
+                                                        values.emphasize = values.emphasize ?? null;
+                                                        return values;
+                                                    },
                                                     submit: function(formTask){
                                                         for(const [key, value] of Object.entries(formTask.val())){
                                                             self._process[self._current.stage].tasks[self._current.task][key] = value;
@@ -1038,6 +1075,18 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                                                         placeholder: self._builder.Locale.get('Enter a CSS Selector'),
                                                         class: {
                                                             component: 'col-12 col-md-6',
+                                                        },
+                                                    }
+                                                );
+
+                                                // isDisabled
+                                                formTask.add(
+                                                    'switch',
+                                                    {
+                                                        name: 'isDisabled',
+                                                        label: self._builder.Locale.get('Automated'),
+                                                        class: {
+                                                            component: 'col-12',
                                                         },
                                                     }
                                                 );
@@ -1279,6 +1328,7 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                 value: this._process[this._current.stage].tasks[this._current.task].value ?? '',
                 cost: this._process[this._current.stage].tasks[this._current.task].cost ?? '',
                 emphasize: this._process[this._current.stage].tasks[this._current.task].emphasize ?? '',
+                isDisabled: this._process[this._current.stage].tasks[this._current.task].isDisabled ?? false,
             });
         }
 
@@ -1315,7 +1365,7 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
         }
     }
 
-    addStage(stage = {}, order = null){
+    addStage(data = {}, order = null){
 
         // Set Self
         const self = this;
@@ -1323,21 +1373,25 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
         // Set default order if not provided
         order = order ?? Object.keys(this._stages).length + 1;
 
-        // Set default stage if not provided
-        for(const [key, value] of Object.entries({
+        // Set default stage
+        const stage = {
             name: 'New Stage',
             description: 'Stage Description',
             color: 'teal',
             icon: 'list',
             isCompleted: false,
-            onComplete: null,
-            value: null,
             tasks: {},
-        })){
-            if(typeof stage[key] === 'undefined'){
+        };
+
+        // Override default stage with provided data
+        for(const [key, value] of Object.entries(data)){
+            if(typeof stage[key] !== 'undefined'){
                 stage[key] = value;
             }
         }
+
+        // Sanitize booleans
+        stage.isCompleted = (stage.isCompleted === true || stage.isCompleted === 1 || stage.isCompleted === '1' || stage.isCompleted === 'true') ? true : false;
 
         // Set the stage in the process data
         this._process[order] = stage;
@@ -1358,13 +1412,13 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
         }
     }
 
-    addTask(stageOrder, task = {}, order = null){
+    addTask(stageOrder, data = {}, order = null){
 
         // Set default order if not provided
         order = order ?? Object.keys(this._stages[stageOrder].tasks).length + 1;
 
-        // Set default task if not provided
-        for(const [key, value] of Object.entries({
+        // Set default task
+        const task = {
             name: 'New Task',
             description: 'Task Description',
             isCompleted: false,
@@ -1373,11 +1427,18 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
             value: null,
             emphasize: null,
             cost: 0,
-        })){
-            if(typeof task[key] === 'undefined'){
+        };
+
+        // Override default task with provided data
+        for(const [key, value] of Object.entries(data)){
+            if(typeof task[key] !== 'undefined'){
                 task[key] = value;
             }
         }
+
+        // Sanitize booleans
+        task.isCompleted = (task.isCompleted === true || task.isCompleted === 1 || task.isCompleted === '1' || task.isCompleted === 'true') ? true : false;
+        task.isDisabled = (task.isDisabled === true || task.isDisabled === 1 || task.isDisabled === '1' || task.isDisabled === 'true') ? true : false;
 
         // Set the task in the process data
         this._process[stageOrder].tasks[order] = task;
