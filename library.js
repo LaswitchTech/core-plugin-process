@@ -87,22 +87,11 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
         return new Promise((resolve, reject) => {
             try {
                 // Retrieve the task
-                $.ajax({
-                    url: '/api/tasks/fetch?id='+self._properties.data,
-                    type: 'GET',dataType: 'json',
-                    error: function(response) {
-
-                        // Reject the promise
-                        reject(response);
-                    },
-                    success: function(response) {
-
-                        // Set the task
-                        self._task = response.record;
-
-                        // Resolve the promise
-                        resolve(self._task);
-                    },
+                API.endpoint('/tasks/fetch?id='+self._properties.data).execute(function(response){
+                    self._task = response.record;
+                    resolve(self._task);
+                },function(xhr, status, error){
+                    reject(response);
                 });
             } catch(e) {
                 // Reject the promise
@@ -436,39 +425,33 @@ builder.add('widgets','processTree', class extends builder.ComponentClass {
         const stepData = this._task.process[this.#currentStep];
 
         // Save the task
-        $.ajax({
-            url: '/api/tasks/update?id=' + this._task.id,
-            headers: {'X-CSRF-Authorization': CSRF_KEY},
-            type: 'POST',dataType: 'json',
-            data: {process: this._task.process, progress: this.#currentStep},
-            success: function(response) {
+        API.endpoint('/tasks/update?id=' + this._task.id).data({process: this._task.process, progress: this.#currentStep}).execute(function(response){
 
-                // Update any status badge
-                var badges = $('.badge[data-type="status"][data-task="'+self._task.id+'"]');
-                badges.each(function(){
-                    var badge = $(this);
+            // Update any status badge
+            var badges = $('.badge[data-type="status"][data-task="'+self._task.id+'"]');
+            badges.each(function(){
+                var badge = $(this);
 
-                    // Remove any classes starting with text-bg-
-                    badge.removeClass(function(index, className) {
-                        return (className.match(/(^|\s)text-bg-\S+/g) || []).join(' ');
-                    });
-
-                    // Set the new background color
-                    badge.addClass('text-bg-'+stepData.color);
-
-                    // Clear the content of the badge
-                    badge.html('');
-
-                    // Add the new label
-                    badge.text(builder.Locale.get(stepData.name));
-
-                    // Insert the new icon
-                    var icon = $(document.createElement('i')).addClass('me-1 bi bi-'+stepData.icon).prependTo(badge);
+                // Remove any classes starting with text-bg-
+                badge.removeClass(function(index, className) {
+                    return (className.match(/(^|\s)text-bg-\S+/g) || []).join(' ');
                 });
 
-                // Render the changes
-                self.render(true);
-            },
+                // Set the new background color
+                badge.addClass('text-bg-'+stepData.color);
+
+                // Clear the content of the badge
+                badge.html('');
+
+                // Add the new label
+                badge.text(builder.Locale.get(stepData.name));
+
+                // Insert the new icon
+                var icon = $(document.createElement('i')).addClass('me-1 bi bi-'+stepData.icon).prependTo(badge);
+            });
+
+            // Render the changes
+            self.render(true);
         });
     }
 
@@ -585,582 +568,553 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
         }
 
         // Fetch the process data
-        $.ajax({
-            url: '/api/process/fetch?id='+self._properties.data,
-            type: 'GET',dataType: 'json',
-            error: function(xhr, status, error) {
-                let color = 'info', icon = 'question-circle', title = builder.Locale.get(xhr.statusText), content = builder.Locale.get(xhr.responseText);
-                switch(xhr.status){
-                    case 403: color = 'danger'; icon = 'shield-lock'; break;
-                    case 404: color = 'warning'; icon = 'question-diamond'; break;
-                    case 500: color = 'danger'; icon = 'bug'; break;
-                }
-                self._builder.Component(
-                    "alert",
-                    self._component,
-                    {
-                        class: {
-                            component: 'm-3',
-                        },
-                        dismissible: false,
-                        icon:icon,
-                        color:color,
-                        title:title
+        API.endpoint('/process/fetch?id='+self._properties.data).execute(function(response){
+
+            // Store the data
+            self.data(response);
+
+            // Create a grid
+            self._component.grid = $(document.createElement('div')).addClass('process-grid row g-0 m-0').appendTo(self._component);
+
+            // Create additional columns
+            self._component.grid.col1 = $(document.createElement('div')).addClass('col-12 col-md-3').appendTo(self._component.grid);
+            self._component.grid.col2 = $(document.createElement('div')).addClass('col-12 col-md-9').appendTo(self._component.grid);
+
+            // Create the meta section
+            self._component.grid.meta = $(document.createElement('div')).addClass('process-meta col-12').prependTo(self._component.grid);
+            self._component.grid.meta.title = $(document.createElement('div')).addClass('process-meta-bar').html('<h5 class="m-0">'+self._builder.Locale.get('Process Meta')+'</h5>').appendTo(self._component.grid.meta);
+            self._component.grid.meta.tree = $(document.createElement('div')).addClass('p-3 py-2 border-bottom').appendTo(self._component.grid.meta);
+
+            // Create the meta form
+            self._builder.Utility(
+                'form',
+                self._component.grid.meta.tree,
+                {
+                    class: {
+                        component: 'row g-3',
                     },
-                    function(alert,component){
-                        component.content.html('<pre class="m-0 p-2">'+content+'</pre>');
-                    }
-                );
-            },
-            success: function(response) {
-
-                // Store the data
-                self.data(response);
-                console.log(self.data());
-
-                // Create a grid
-                self._component.grid = $(document.createElement('div')).addClass('process-grid row g-0 m-0').appendTo(self._component);
-
-                // Create additional columns
-                self._component.grid.col1 = $(document.createElement('div')).addClass('col-12 col-md-3').appendTo(self._component.grid);
-                self._component.grid.col2 = $(document.createElement('div')).addClass('col-12 col-md-9').appendTo(self._component.grid);
-
-                // Create the meta section
-                self._component.grid.meta = $(document.createElement('div')).addClass('process-meta col-12').prependTo(self._component.grid);
-                self._component.grid.meta.title = $(document.createElement('div')).addClass('process-meta-bar').html('<h5 class="m-0">'+self._builder.Locale.get('Process Meta')+'</h5>').appendTo(self._component.grid.meta);
-                self._component.grid.meta.tree = $(document.createElement('div')).addClass('p-3 py-2 border-bottom').appendTo(self._component.grid.meta);
-
-                // Create the meta form
-                self._builder.Utility(
-                    'form',
-                    self._component.grid.meta.tree,
-                    {
-                        class: {
-                            component: 'row g-3',
-                        },
-                        callback: {
-                            val: function(values){
-                                self._component.grid.col2.stage.form.submit();
-                                self._component.grid.col2.task.form.submit();
-                                values.description = values.description ?? null;
-                                for(const [sorder, stage] of Object.entries(self._process)){
-                                    stage.name = (stage.name === '') ? null : stage.name;
-                                    stage.description = (stage.description === '') ? null : stage.description;
-                                    stage.color = (stage.color === '') ? null : stage.color;
-                                    stage.icon = (stage.icon === '') ? null : stage.icon;
-                                    stage.isCompleted = (stage.isCompleted === true || stage.isCompleted === 1 || stage.isCompleted === '1' || stage.isCompleted === 'true') ? true : false;
-                                    for(const [torder, task] of Object.entries(stage.tasks)){
-                                        task.name = (task.name === '') ? null : task.name;
-                                        task.description = (task.description === '') ? null : task.description;
-                                        task.value = (task.value === '') ? null : task.value;
-                                        task.emphasize = (task.emphasize === '') ? null : task.emphasize;
-                                        task.onComplete = (task.onComplete === '') ? null : task.onComplete;
-                                        task.cost = parseInt(task.cost);
-                                        task.isCompleted = (task.isCompleted === true || task.isCompleted === 1 || task.isCompleted === '1' || task.isCompleted === 'true') ? true : false;
-                                        task.isDisabled = (task.isDisabled === true || task.isDisabled === 1 || task.isDisabled === '1' || task.isDisabled === 'true') ? true : false;
-                                        stage.tasks[torder] = task;
-                                    }
-                                    self._process[sorder] = stage;
+                    callback: {
+                        val: function(values){
+                            self._component.grid.col2.stage.form.submit();
+                            self._component.grid.col2.task.form.submit();
+                            values.description = values.description ?? null;
+                            for(const [sorder, stage] of Object.entries(self._process)){
+                                stage.name = (stage.name === '') ? null : stage.name;
+                                stage.description = (stage.description === '') ? null : stage.description;
+                                stage.color = (stage.color === '') ? null : stage.color;
+                                stage.icon = (stage.icon === '') ? null : stage.icon;
+                                stage.isCompleted = (stage.isCompleted === true || stage.isCompleted === 1 || stage.isCompleted === '1' || stage.isCompleted === 'true') ? true : false;
+                                for(const [torder, task] of Object.entries(stage.tasks)){
+                                    task.name = (task.name === '') ? null : task.name;
+                                    task.description = (task.description === '') ? null : task.description;
+                                    task.value = (task.value === '') ? null : task.value;
+                                    task.emphasize = (task.emphasize === '') ? null : task.emphasize;
+                                    task.onComplete = (task.onComplete === '') ? null : task.onComplete;
+                                    task.cost = parseInt(task.cost);
+                                    task.isCompleted = (task.isCompleted === true || task.isCompleted === 1 || task.isCompleted === '1' || task.isCompleted === 'true') ? true : false;
+                                    task.isDisabled = (task.isDisabled === true || task.isDisabled === 1 || task.isDisabled === '1' || task.isDisabled === 'true') ? true : false;
+                                    stage.tasks[torder] = task;
                                 }
-                                values.process = JSON.stringify(self._process);
-                                return values;
-                            },
-                            submit: function(form){
-                                self.save();
+                                self._process[sorder] = stage;
+                            }
+                            values.process = JSON.stringify(self._process);
+                            return values;
+                        },
+                        submit: function(form){
+                            self.save();
+                        },
+                    }
+                },
+                function(form,component){
+
+                    // Store the form
+                    self._component.grid.meta.form = form;
+
+                    // category
+                    form.add(
+                        'select2',
+                        {
+                            name: 'category',
+                            label: self._builder.Locale.get('Category'),
+                            placeholder: self._builder.Locale.get('Select a category'),
+                            options: self.categories(),
+                            value: self.data().record.category ?? null,
+                            class: {
+                                component: 'col-12 col-md-6',
                             },
                         }
-                    },
-                    function(form,component){
+                    );
 
-                        // Store the form
-                        self._component.grid.meta.form = form;
-
-                        // category
-                        form.add(
-                            'select2',
-                            {
-                                name: 'category',
-                                label: self._builder.Locale.get('Category'),
-                                placeholder: self._builder.Locale.get('Select a category'),
-                                options: self.categories(),
-                                value: self.data().record.category ?? null,
-                                class: {
-                                    component: 'col-12 col-md-6',
-                                },
-                            }
-                        );
-
-                        // targetTable
-                        form.add(
-                            'select2',
-                            {
-                                name: 'targetTable',
-                                label: self._builder.Locale.get('Table'),
-                                placeholder: self._builder.Locale.get('Select a table'),
-                                options: self.tables(),
-                                value: self.data().record.targetTable ?? null,
-                                class: {
-                                    component: 'col-12 col-md-6',
-                                },
-                            }
-                        );
-
-                        // description
-                        form.add(
-                            'textarea',
-                            {
-                                name: 'description',
-                                label: self._builder.Locale.get('Description'),
-                                placeholder: self._builder.Locale.get('Enter a description'),
-                                value: self.data().record.description ?? null,
-                                class: {
-                                    component: 'col-12',
-                                },
+                    // targetTable
+                    form.add(
+                        'select2',
+                        {
+                            name: 'targetTable',
+                            label: self._builder.Locale.get('Table'),
+                            placeholder: self._builder.Locale.get('Select a table'),
+                            options: self.tables(),
+                            value: self.data().record.targetTable ?? null,
+                            class: {
+                                component: 'col-12 col-md-6',
                             },
-                            function(input){
-                                input._component.input.attr({'rows': 5,'style': 'resize: none;'});
-                            },
-                        );
+                        }
+                    );
 
-                        // submit
-                        form.add(
-                            'submit',
-                            {
-                                name: 'submit',
-                                value: self._builder.Locale.get('Save Changes'),
-                                class: {
-                                    component: 'col-12 justify-content-end',
-                                },
+                    // description
+                    form.add(
+                        'textarea',
+                        {
+                            name: 'description',
+                            label: self._builder.Locale.get('Description'),
+                            placeholder: self._builder.Locale.get('Enter a description'),
+                            value: self.data().record.description ?? null,
+                            class: {
+                                component: 'col-12',
                             },
-                            function(input){
-                                input._component.input.removeClass('btn-primary').addClass('btn-success');
-                                $(document.createElement('button')).attr({
-                                    'type': 'button',
-                                    'class': 'btn btn-warning',
-                                }).text(self._builder.Locale.get('Apply')).appendTo(input._component).click(function(){
-                                    self.apply();
-                                });
-                                $(document.createElement('button')).attr({
-                                    'type': 'button',
-                                    'class': 'btn btn-light',
-                                }).text(self._builder.Locale.get('Import')).appendTo(input._component).click(function(){
-                                    self.import();
-                                });
-                                $(document.createElement('button')).attr({
-                                    'type': 'button',
-                                    'class': 'btn btn-primary',
-                                }).text(self._builder.Locale.get('Export')).appendTo(input._component).click(function(){
-                                    self.export();
-                                });
-                            },
-                        );
-                    },
-                );
-
-                // Create the stages section
-                self._component.grid.col1.stages = $(document.createElement('div')).addClass('process-stages').appendTo(self._component.grid.col1);
-                self._component.grid.col1.stages.bar = $(document.createElement('div')).addClass('process-stages-bar').appendTo(self._component.grid.col1.stages);
-                self._component.grid.col1.stages.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Stages')).appendTo(self._component.grid.col1.stages.bar);
-                self._component.grid.col1.stages.bar.add = $(document.createElement('button')).attr({
-                    'type': 'button',
-                    'class': 'btn btn-success ms-auto',
-                }).html('<i class="bi bi-plus-lg"></i>').appendTo(self._component.grid.col1.stages.bar).click(function(){
-                    self.addStage();
-                    self.render();
-                });
-                self._component.grid.col1.stages.tree = $(document.createElement('div')).addClass('process-stages-tree border-bottom').appendTo(self._component.grid.col1.stages);
-
-                // Create the tabs section
-                self._builder.Component(
-                    "tabs",
-                    self._component.grid.col2,
-                    {
-                        class: {
-                            navbar: 'nav-pills',
                         },
-                    },
-                    function(tabs,card){
+                        function(input){
+                            input._component.input.attr({'rows': 5,'style': 'resize: none;'});
+                        },
+                    );
 
-                        // Styling
-                        card._component.tools.remove();
-                        card._component.header.addClass('bg-gray-200 rounded-0');
-                        card._component.header.heading.addClass('m-0');
-                        card._component.card.addClass('border-0 rounded-0');
-                        card._component.body.removeClass('card-body');
-
-                        // Editor
-                        tabs.add(
-                            'editor',
-                            {
-                                icon: "pencil-square",
-                                label: builder.Locale.get("Editor"),
+                    // submit
+                    form.add(
+                        'submit',
+                        {
+                            name: 'submit',
+                            value: self._builder.Locale.get('Save Changes'),
+                            class: {
+                                component: 'col-12 justify-content-end',
                             },
-                            function(tab,nav){
+                        },
+                        function(input){
+                            input._component.input.removeClass('btn-primary').addClass('btn-success');
+                            $(document.createElement('button')).attr({
+                                'type': 'button',
+                                'class': 'btn btn-warning',
+                            }).text(self._builder.Locale.get('Apply')).appendTo(input._component).click(function(){
+                                self.apply();
+                            });
+                            $(document.createElement('button')).attr({
+                                'type': 'button',
+                                'class': 'btn btn-light',
+                            }).text(self._builder.Locale.get('Import')).appendTo(input._component).click(function(){
+                                self.import();
+                            });
+                            $(document.createElement('button')).attr({
+                                'type': 'button',
+                                'class': 'btn btn-primary',
+                            }).text(self._builder.Locale.get('Export')).appendTo(input._component).click(function(){
+                                self.export();
+                            });
+                        },
+                    );
+                },
+            );
 
-                                // Create the stage section
-                                self._component.grid.col2.stage = $(document.createElement('div')).addClass('process-stage').appendTo(tab);
-                                self._component.grid.col2.stage.bar = $(document.createElement('div')).addClass('process-stage-bar').appendTo(self._component.grid.col2.stage);
-                                self._component.grid.col2.stage.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Stage')).appendTo(self._component.grid.col2.stage.bar);
-                                self._component.grid.col2.stage.bar.badge = $(document.createElement('span')).attr({
-                                    'class': 'badge text-bg-primary ms-2',
-                                    'data-stage': self._current.stage,
-                                }).text('#'+self._current.stage).appendTo(self._component.grid.col2.stage.bar);
-                                self._component.grid.col2.stage.bar.controls = $(document.createElement('div')).attr({
-                                    'class': 'btn-group border rounded ms-auto',
-                                }).appendTo(self._component.grid.col2.stage.bar);
-                                self._component.grid.col2.stage.bar.controls.up = $(document.createElement('button')).attr({
-                                    'type': 'button',
-                                    'class': 'btn btn-light',
-                                }).html('<i class="bi bi-chevron-up"></i>').appendTo(self._component.grid.col2.stage.bar.controls).click(function(){
-                                    self.indexStages((self._current.stage - 1));
-                                });
-                                self._component.grid.col2.stage.bar.controls.down = $(document.createElement('button')).attr({
-                                    'type': 'button',
-                                    'class': 'btn btn-light',
-                                }).html('<i class="bi bi-chevron-down"></i>').appendTo(self._component.grid.col2.stage.bar.controls).click(function(){
-                                    self.indexStages((self._current.stage + 1));
-                                });
-                                self._component.grid.col2.stage.bar.controls.delete = $(document.createElement('button')).attr({
-                                    'type': 'button',
-                                    'class': 'btn btn-danger',
-                                }).html('<i class="bi bi-trash"></i>').appendTo(self._component.grid.col2.stage.bar.controls).click(function(){
-                                    self.deleteStage();
-                                });
-                                self._component.grid.col2.stage.tree = $(document.createElement('div')).addClass('border-bottom p-3 py-2').appendTo(self._component.grid.col2.stage);
+            // Create the stages section
+            self._component.grid.col1.stages = $(document.createElement('div')).addClass('process-stages').appendTo(self._component.grid.col1);
+            self._component.grid.col1.stages.bar = $(document.createElement('div')).addClass('process-stages-bar').appendTo(self._component.grid.col1.stages);
+            self._component.grid.col1.stages.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Stages')).appendTo(self._component.grid.col1.stages.bar);
+            self._component.grid.col1.stages.bar.add = $(document.createElement('button')).attr({
+                'type': 'button',
+                'class': 'btn btn-success ms-auto',
+            }).html('<i class="bi bi-plus-lg"></i>').appendTo(self._component.grid.col1.stages.bar).click(function(){
+                self.addStage();
+                self.render();
+            });
+            self._component.grid.col1.stages.tree = $(document.createElement('div')).addClass('process-stages-tree border-bottom').appendTo(self._component.grid.col1.stages);
 
-                                // Create the stage form
-                                self._builder.Utility(
-                                    'form',
-                                    self._component.grid.col2.stage.tree,
-                                    {
-                                        class: {
-                                            component: 'row g-3',
+            // Create the tabs section
+            self._builder.Component(
+                "tabs",
+                self._component.grid.col2,
+                {
+                    class: {
+                        navbar: 'nav-pills',
+                    },
+                },
+                function(tabs,card){
+
+                    // Styling
+                    card._component.tools.remove();
+                    card._component.header.addClass('bg-gray-200 rounded-0');
+                    card._component.header.heading.addClass('m-0');
+                    card._component.card.addClass('border-0 rounded-0');
+                    card._component.body.removeClass('card-body');
+
+                    // Editor
+                    tabs.add(
+                        'editor',
+                        {
+                            icon: "pencil-square",
+                            label: builder.Locale.get("Editor"),
+                        },
+                        function(tab,nav){
+
+                            // Create the stage section
+                            self._component.grid.col2.stage = $(document.createElement('div')).addClass('process-stage').appendTo(tab);
+                            self._component.grid.col2.stage.bar = $(document.createElement('div')).addClass('process-stage-bar').appendTo(self._component.grid.col2.stage);
+                            self._component.grid.col2.stage.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Stage')).appendTo(self._component.grid.col2.stage.bar);
+                            self._component.grid.col2.stage.bar.badge = $(document.createElement('span')).attr({
+                                'class': 'badge text-bg-primary ms-2',
+                                'data-stage': self._current.stage,
+                            }).text('#'+self._current.stage).appendTo(self._component.grid.col2.stage.bar);
+                            self._component.grid.col2.stage.bar.controls = $(document.createElement('div')).attr({
+                                'class': 'btn-group border rounded ms-auto',
+                            }).appendTo(self._component.grid.col2.stage.bar);
+                            self._component.grid.col2.stage.bar.controls.up = $(document.createElement('button')).attr({
+                                'type': 'button',
+                                'class': 'btn btn-light',
+                            }).html('<i class="bi bi-chevron-up"></i>').appendTo(self._component.grid.col2.stage.bar.controls).click(function(){
+                                self.indexStages((self._current.stage - 1));
+                            });
+                            self._component.grid.col2.stage.bar.controls.down = $(document.createElement('button')).attr({
+                                'type': 'button',
+                                'class': 'btn btn-light',
+                            }).html('<i class="bi bi-chevron-down"></i>').appendTo(self._component.grid.col2.stage.bar.controls).click(function(){
+                                self.indexStages((self._current.stage + 1));
+                            });
+                            self._component.grid.col2.stage.bar.controls.delete = $(document.createElement('button')).attr({
+                                'type': 'button',
+                                'class': 'btn btn-danger',
+                            }).html('<i class="bi bi-trash"></i>').appendTo(self._component.grid.col2.stage.bar.controls).click(function(){
+                                self.deleteStage();
+                            });
+                            self._component.grid.col2.stage.tree = $(document.createElement('div')).addClass('border-bottom p-3 py-2').appendTo(self._component.grid.col2.stage);
+
+                            // Create the stage form
+                            self._builder.Utility(
+                                'form',
+                                self._component.grid.col2.stage.tree,
+                                {
+                                    class: {
+                                        component: 'row g-3',
+                                    },
+                                    callback: {
+                                        val: function(values){
+                                            values.name = values.name ?? null;
+                                            values.description = values.description ?? null;
+                                            values.color = values.color ?? null;
+                                            values.icon = values.icon ?? null;
+                                            return values;
                                         },
-                                        callback: {
-                                            val: function(values){
-                                                values.name = values.name ?? null;
-                                                values.description = values.description ?? null;
-                                                values.color = values.color ?? null;
-                                                values.icon = values.icon ?? null;
-                                                return values;
+                                        submit: function(form){
+                                            for(const [key, value] of Object.entries(form.val())){
+                                                self._process[self._current.stage][key] = value;
+                                            }
+                                        },
+                                    }
+                                },
+                                function(form,component){
+
+                                    // Store the form
+                                    self._component.grid.col2.stage.form = form;
+
+                                    // name
+                                    form.add(
+                                        'text',
+                                        {
+                                            name: 'name',
+                                            label: self._builder.Locale.get('Name'),
+                                            placeholder: self._builder.Locale.get('Enter a name'),
+                                            class: {
+                                                component: 'col-12',
                                             },
-                                            submit: function(form){
-                                                for(const [key, value] of Object.entries(form.val())){
-                                                    self._process[self._current.stage][key] = value;
-                                                }
+                                        },
+                                        function(input){
+                                            input._component.input.attr({'rows': 5,'style': 'resize: none;'});
+                                        },
+                                    );
+
+                                    // description
+                                    form.add(
+                                        'textarea',
+                                        {
+                                            name: 'description',
+                                            label: self._builder.Locale.get('Description'),
+                                            placeholder: self._builder.Locale.get('Enter a description'),
+                                            class: {
+                                                component: 'col-12',
+                                            },
+                                        },
+                                        function(input){
+                                            input._component.input.attr({'rows': 5,'style': 'resize: none;'});
+                                        },
+                                    );
+
+                                    // color
+                                    form.add(
+                                        'select2',
+                                        {
+                                            name: 'color',
+                                            label: self._builder.Locale.get('Color'),
+                                            placeholder: self._builder.Locale.get('Select a color'),
+                                            options: self.colors(),
+                                            class: {
+                                                component: 'col-12 col-md-6',
+                                            },
+                                            callback:{
+                                                format: function(option, component){
+                                                    if (!option.id) { return option.text; }
+                                                    return $('<div class="px-3 py-2 animate-flicker-hover text-bg-' +  option.element.value.toLowerCase() + '" style="margin: -.375rem -.75rem!important;">' + option.text + '</div>');;
+                                                },
                                             },
                                         }
-                                    },
-                                    function(form,component){
+                                    );
 
-                                        // Store the form
-                                        self._component.grid.col2.stage.form = form;
-
-                                        // name
-                                        form.add(
-                                            'text',
-                                            {
-                                                name: 'name',
-                                                label: self._builder.Locale.get('Name'),
-                                                placeholder: self._builder.Locale.get('Enter a name'),
-                                                class: {
-                                                    component: 'col-12',
+                                    // icon
+                                    form.add(
+                                        'select2',
+                                        {
+                                            name: 'icon',
+                                            label: self._builder.Locale.get('Icon'),
+                                            placeholder: self._builder.Locale.get('Select an icon'),
+                                            options: self.icons(),
+                                            class: {
+                                                component: 'col-12 col-md-6',
+                                            },
+                                            callback:{
+                                                format: function(option, component){
+                                                    if (!option.id) { return option.text; }
+                                                    return $('<span class=""><i class="me-2 text-bg-light p-1 fs-4 rounded bi bi-' +  option.element.value.toLowerCase() + '"></i>' + option.text + '</span>');
                                                 },
                                             },
-                                            function(input){
-                                                input._component.input.attr({'rows': 5,'style': 'resize: none;'});
-                                            },
-                                        );
+                                        }
+                                    );
 
-                                        // description
-                                        form.add(
-                                            'textarea',
-                                            {
-                                                name: 'description',
-                                                label: self._builder.Locale.get('Description'),
-                                                placeholder: self._builder.Locale.get('Enter a description'),
-                                                class: {
-                                                    component: 'col-12',
-                                                },
-                                            },
-                                            function(input){
-                                                input._component.input.attr({'rows': 5,'style': 'resize: none;'});
-                                            },
-                                        );
+                                    // Create the task section
+                                    self._component.grid.col2.task = $(document.createElement('div')).addClass('process-task').appendTo(tab);
+                                    self._component.grid.col2.task.bar = $(document.createElement('div')).addClass('process-task-bar').appendTo(self._component.grid.col2.task);
+                                    self._component.grid.col2.task.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Task')).appendTo(self._component.grid.col2.task.bar);
+                                    self._component.grid.col2.task.bar.badge = $(document.createElement('span')).attr({
+                                        'class': 'badge text-bg-primary ms-2',
+                                        'data-task': self._current.task,
+                                    }).text('#'+self._current.task).appendTo(self._component.grid.col2.task.bar);
+                                    self._component.grid.col2.task.bar.controls = $(document.createElement('div')).attr({
+                                        'class': 'btn-group border rounded ms-auto',
+                                    }).appendTo(self._component.grid.col2.task.bar);
+                                    self._component.grid.col2.task.bar.controls.up = $(document.createElement('button')).attr({
+                                        'type': 'button',
+                                        'class': 'btn btn-light',
+                                    }).html('<i class="bi bi-chevron-up"></i>').appendTo(self._component.grid.col2.task.bar.controls).click(function(){
+                                        self.indexTasks((self._current.task - 1));
+                                    });
+                                    self._component.grid.col2.task.bar.controls.down = $(document.createElement('button')).attr({
+                                        'type': 'button',
+                                        'class': 'btn btn-light',
+                                    }).html('<i class="bi bi-chevron-down"></i>').appendTo(self._component.grid.col2.task.bar.controls).click(function(){
+                                        self.indexTasks((self._current.task + 1));
+                                    });
+                                    self._component.grid.col2.task.bar.controls.delete = $(document.createElement('button')).attr({
+                                        'type': 'button',
+                                        'class': 'btn btn-danger',
+                                    }).html('<i class="bi bi-trash"></i>').appendTo(self._component.grid.col2.task.bar.controls).click(function(){
+                                        self.deleteTask();
+                                    });
+                                    self._component.grid.col2.task.tree = $(document.createElement('div')).addClass('border-bottom p-3 py-2').appendTo(self._component.grid.col2.task);
 
-                                        // color
-                                        form.add(
-                                            'select2',
-                                            {
-                                                name: 'color',
-                                                label: self._builder.Locale.get('Color'),
-                                                placeholder: self._builder.Locale.get('Select a color'),
-                                                options: self.colors(),
-                                                class: {
-                                                    component: 'col-12 col-md-6',
+                                    // Create the task form
+                                    self._builder.Utility(
+                                        'form',
+                                        self._component.grid.col2.task.tree,
+                                        {
+                                            class: {
+                                                component: 'row g-3',
+                                            },
+                                            callback: {
+                                                val: function(values){
+                                                    values.name = values.name ?? null;
+                                                    values.description = values.description ?? null;
+                                                    values.onComplete = values.onComplete ?? null;
+                                                    values.value = values.value ?? null;
+                                                    values.cost = parseInt(values.cost);
+                                                    values.emphasize = values.emphasize ?? null;
+                                                    return values;
                                                 },
-                                                callback:{
-                                                    format: function(option, component){
-                                                        if (!option.id) { return option.text; }
-                                                        return $('<div class="px-3 py-2 animate-flicker-hover text-bg-' +  option.element.value.toLowerCase() + '" style="margin: -.375rem -.75rem!important;">' + option.text + '</div>');;
-                                                    },
+                                                submit: function(formTask){
+                                                    for(const [key, value] of Object.entries(formTask.val())){
+                                                        self._process[self._current.stage].tasks[self._current.task][key] = value;
+                                                    }
                                                 },
                                             }
-                                        );
+                                        },
+                                        function(formTask,component){
 
-                                        // icon
-                                        form.add(
-                                            'select2',
-                                            {
-                                                name: 'icon',
-                                                label: self._builder.Locale.get('Icon'),
-                                                placeholder: self._builder.Locale.get('Select an icon'),
-                                                options: self.icons(),
-                                                class: {
-                                                    component: 'col-12 col-md-6',
-                                                },
-                                                callback:{
-                                                    format: function(option, component){
-                                                        if (!option.id) { return option.text; }
-                                                        return $('<span class=""><i class="me-2 text-bg-light p-1 fs-4 rounded bi bi-' +  option.element.value.toLowerCase() + '"></i>' + option.text + '</span>');
+                                            // Store the form
+                                            self._component.grid.col2.task.form = formTask;
+
+                                            // name
+                                            formTask.add(
+                                                'text',
+                                                {
+                                                    name: 'name',
+                                                    label: self._builder.Locale.get('Name'),
+                                                    placeholder: self._builder.Locale.get('Enter a name'),
+                                                    class: {
+                                                        component: 'col-12',
                                                     },
                                                 },
-                                            }
-                                        );
-
-                                        // Create the task section
-                                        self._component.grid.col2.task = $(document.createElement('div')).addClass('process-task').appendTo(tab);
-                                        self._component.grid.col2.task.bar = $(document.createElement('div')).addClass('process-task-bar').appendTo(self._component.grid.col2.task);
-                                        self._component.grid.col2.task.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Task')).appendTo(self._component.grid.col2.task.bar);
-                                        self._component.grid.col2.task.bar.badge = $(document.createElement('span')).attr({
-                                            'class': 'badge text-bg-primary ms-2',
-                                            'data-task': self._current.task,
-                                        }).text('#'+self._current.task).appendTo(self._component.grid.col2.task.bar);
-                                        self._component.grid.col2.task.bar.controls = $(document.createElement('div')).attr({
-                                            'class': 'btn-group border rounded ms-auto',
-                                        }).appendTo(self._component.grid.col2.task.bar);
-                                        self._component.grid.col2.task.bar.controls.up = $(document.createElement('button')).attr({
-                                            'type': 'button',
-                                            'class': 'btn btn-light',
-                                        }).html('<i class="bi bi-chevron-up"></i>').appendTo(self._component.grid.col2.task.bar.controls).click(function(){
-                                            self.indexTasks((self._current.task - 1));
-                                        });
-                                        self._component.grid.col2.task.bar.controls.down = $(document.createElement('button')).attr({
-                                            'type': 'button',
-                                            'class': 'btn btn-light',
-                                        }).html('<i class="bi bi-chevron-down"></i>').appendTo(self._component.grid.col2.task.bar.controls).click(function(){
-                                            self.indexTasks((self._current.task + 1));
-                                        });
-                                        self._component.grid.col2.task.bar.controls.delete = $(document.createElement('button')).attr({
-                                            'type': 'button',
-                                            'class': 'btn btn-danger',
-                                        }).html('<i class="bi bi-trash"></i>').appendTo(self._component.grid.col2.task.bar.controls).click(function(){
-                                            self.deleteTask();
-                                        });
-                                        self._component.grid.col2.task.tree = $(document.createElement('div')).addClass('border-bottom p-3 py-2').appendTo(self._component.grid.col2.task);
-
-                                        // Create the task form
-                                        self._builder.Utility(
-                                            'form',
-                                            self._component.grid.col2.task.tree,
-                                            {
-                                                class: {
-                                                    component: 'row g-3',
+                                                function(input){
+                                                    input._component.input.attr({'rows': 5,'style': 'resize: none;'});
                                                 },
-                                                callback: {
-                                                    val: function(values){
-                                                        values.name = values.name ?? null;
-                                                        values.description = values.description ?? null;
-                                                        values.onComplete = values.onComplete ?? null;
-                                                        values.value = values.value ?? null;
-                                                        values.cost = parseInt(values.cost);
-                                                        values.emphasize = values.emphasize ?? null;
-                                                        return values;
+                                            );
+
+                                            // description
+                                            formTask.add(
+                                                'textarea',
+                                                {
+                                                    name: 'description',
+                                                    label: self._builder.Locale.get('Description'),
+                                                    placeholder: self._builder.Locale.get('Enter a description'),
+                                                    class: {
+                                                        component: 'col-12',
                                                     },
-                                                    submit: function(formTask){
-                                                        for(const [key, value] of Object.entries(formTask.val())){
-                                                            self._process[self._current.stage].tasks[self._current.task][key] = value;
-                                                        }
+                                                },
+                                                function(input){
+                                                    input._component.input.attr({'rows': 5,'style': 'resize: none;'});
+                                                },
+                                            );
+
+                                            // onComplete
+                                            formTask.add(
+                                                'select2',
+                                                {
+                                                    name: 'onComplete',
+                                                    label: self._builder.Locale.get('Function'),
+                                                    placeholder: self._builder.Locale.get('Select a funtion'),
+                                                    options: self.functions(),
+                                                    allowClear: true,
+                                                    class: {
+                                                        component: 'col-12 col-md-6',
                                                     },
                                                 }
-                                            },
-                                            function(formTask,component){
+                                            );
 
-                                                // Store the form
-                                                self._component.grid.col2.task.form = formTask;
-
-                                                // name
-                                                formTask.add(
-                                                    'text',
-                                                    {
-                                                        name: 'name',
-                                                        label: self._builder.Locale.get('Name'),
-                                                        placeholder: self._builder.Locale.get('Enter a name'),
-                                                        class: {
-                                                            component: 'col-12',
-                                                        },
+                                            // value
+                                            formTask.add(
+                                                'text',
+                                                {
+                                                    name: 'value',
+                                                    label: self._builder.Locale.get('Value'),
+                                                    placeholder: self._builder.Locale.get('Enter a value'),
+                                                    class: {
+                                                        component: 'col-12 col-md-6',
                                                     },
-                                                    function(input){
-                                                        input._component.input.attr({'rows': 5,'style': 'resize: none;'});
+                                                }
+                                            );
+
+                                            // cost
+                                            formTask.add(
+                                                'number',
+                                                {
+                                                    name: 'cost',
+                                                    label: self._builder.Locale.get('Cost'),
+                                                    placeholder: self._builder.Locale.get('Enter a cost (in minutes)'),
+                                                    class: {
+                                                        component: 'col-12 col-md-6',
                                                     },
-                                                );
+                                                },
+                                                function(input){
+                                                    input._component.input.attr({
+                                                        'step':'1',
+                                                        'min':'0',
+                                                    });
+                                                }
+                                            );
 
-                                                // description
-                                                formTask.add(
-                                                    'textarea',
-                                                    {
-                                                        name: 'description',
-                                                        label: self._builder.Locale.get('Description'),
-                                                        placeholder: self._builder.Locale.get('Enter a description'),
-                                                        class: {
-                                                            component: 'col-12',
-                                                        },
+                                            // emphasis
+                                            formTask.add(
+                                                'text',
+                                                {
+                                                    name: 'emphasize',
+                                                    label: self._builder.Locale.get('Emphasis'),
+                                                    placeholder: self._builder.Locale.get('Enter a CSS Selector'),
+                                                    class: {
+                                                        component: 'col-12 col-md-6',
                                                     },
-                                                    function(input){
-                                                        input._component.input.attr({'rows': 5,'style': 'resize: none;'});
+                                                }
+                                            );
+
+                                            // isDisabled
+                                            formTask.add(
+                                                'switch',
+                                                {
+                                                    name: 'isDisabled',
+                                                    label: self._builder.Locale.get('Automated'),
+                                                    class: {
+                                                        component: 'col-12',
                                                     },
-                                                );
+                                                }
+                                            );
 
-                                                // onComplete
-                                                formTask.add(
-                                                    'select2',
-                                                    {
-                                                        name: 'onComplete',
-                                                        label: self._builder.Locale.get('Function'),
-                                                        placeholder: self._builder.Locale.get('Select a funtion'),
-                                                        options: self.functions(),
-                                                        allowClear: true,
-                                                        class: {
-                                                            component: 'col-12 col-md-6',
-                                                        },
-                                                    }
-                                                );
+                                            // Create the tasks section
+                                            self._component.grid.col2.tasks = $(document.createElement('div')).addClass('process-tasks').appendTo(tab);
+                                            self._component.grid.col2.tasks.bar = $(document.createElement('div')).addClass('process-tasks-bar').appendTo(self._component.grid.col2.tasks);
+                                            self._component.grid.col2.tasks.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Tasks')).appendTo(self._component.grid.col2.tasks.bar);
+                                            self._component.grid.col2.tasks.bar.add = $(document.createElement('button')).attr({
+                                                'type': 'button',
+                                                'class': 'btn btn-success ms-auto',
+                                            }).html('<i class="bi bi-plus-lg"></i>').appendTo(self._component.grid.col2.tasks.bar).click(function(){
+                                                self.addTask(self._current.stage);
+                                                self.render();
+                                            });;
+                                            self._component.grid.col2.tasks.tree = $(document.createElement('div')).addClass('process-tasks-tree').appendTo(self._component.grid.col2.tasks);
 
-                                                // value
-                                                formTask.add(
-                                                    'text',
-                                                    {
-                                                        name: 'value',
-                                                        label: self._builder.Locale.get('Value'),
-                                                        placeholder: self._builder.Locale.get('Enter a value'),
-                                                        class: {
-                                                            component: 'col-12 col-md-6',
-                                                        },
-                                                    }
-                                                );
-
-                                                // cost
-                                                formTask.add(
-                                                    'number',
-                                                    {
-                                                        name: 'cost',
-                                                        label: self._builder.Locale.get('Cost'),
-                                                        placeholder: self._builder.Locale.get('Enter a cost (in minutes)'),
-                                                        class: {
-                                                            component: 'col-12 col-md-6',
-                                                        },
-                                                    },
-                                                    function(input){
-                                                        input._component.input.attr({
-                                                            'step':'1',
-                                                            'min':'0',
-                                                        });
-                                                    }
-                                                );
-
-                                                // emphasis
-                                                formTask.add(
-                                                    'text',
-                                                    {
-                                                        name: 'emphasize',
-                                                        label: self._builder.Locale.get('Emphasis'),
-                                                        placeholder: self._builder.Locale.get('Enter a CSS Selector'),
-                                                        class: {
-                                                            component: 'col-12 col-md-6',
-                                                        },
-                                                    }
-                                                );
-
-                                                // isDisabled
-                                                formTask.add(
-                                                    'switch',
-                                                    {
-                                                        name: 'isDisabled',
-                                                        label: self._builder.Locale.get('Automated'),
-                                                        class: {
-                                                            component: 'col-12',
-                                                        },
-                                                    }
-                                                );
-
-                                                // Create the tasks section
-                                                self._component.grid.col2.tasks = $(document.createElement('div')).addClass('process-tasks').appendTo(tab);
-                                                self._component.grid.col2.tasks.bar = $(document.createElement('div')).addClass('process-tasks-bar').appendTo(self._component.grid.col2.tasks);
-                                                self._component.grid.col2.tasks.bar.title = $(document.createElement('h5')).text(self._builder.Locale.get('Tasks')).appendTo(self._component.grid.col2.tasks.bar);
-                                                self._component.grid.col2.tasks.bar.add = $(document.createElement('button')).attr({
-                                                    'type': 'button',
-                                                    'class': 'btn btn-success ms-auto',
-                                                }).html('<i class="bi bi-plus-lg"></i>').appendTo(self._component.grid.col2.tasks.bar).click(function(){
-                                                    self.addTask(self._current.stage);
+                                            // Render the stages
+                                            for(const [order, stage] of Object.entries(self.data().record.process ?? {})){
+                                                self.addStage(stage);
+                                                if(Object.entries(self.data().record.process ?? {}).length === parseInt(order)){
                                                     self.render();
-                                                });;
-                                                self._component.grid.col2.tasks.tree = $(document.createElement('div')).addClass('process-tasks-tree').appendTo(self._component.grid.col2.tasks);
-
-                                                // Render the stages
-                                                for(const [order, stage] of Object.entries(self.data().record.process ?? {})){
-                                                    self.addStage(stage);
-                                                    if(Object.entries(self.data().record.process ?? {}).length === parseInt(order)){
-                                                        self.render();
-                                                    }
                                                 }
-                                            },
-                                        );
-                                    },
-                                );
+                                            }
+                                        },
+                                    );
+                                },
+                            );
+                        },
+                    );
+
+                    // Notes
+                    if(self._data.extensions.includes('notes')){
+
+                        // Add the tab
+                        tabs.add(
+                            'notes',
+                            {
+                                icon: "stickies",
+                                label: builder.Locale.get("Notes"),
+                            },
+                            function(tab,nav){
+                                self._builder.Widget('notes',tab,{data: self._data.dependencies.notes ?? {},targetTable: 'processes',targetId: self._properties.data})
                             },
                         );
-
-                        // Notes
-                        if(self._data.extensions.includes('notes')){
-
-                            // Add the tab
-                            tabs.add(
-                                'notes',
-                                {
-                                    icon: "stickies",
-                                    label: builder.Locale.get("Notes"),
-                                },
-                                function(tab,nav){
-                                    self._builder.Widget('notes',tab,{data: self._data.dependencies.notes ?? {},targetTable: 'processes',targetId: self._properties.data})
-                                },
-                            );
-                        }
-
-                        // Event
-                        if(self._data.extensions.includes('event')){
-
-                            // Add the Event tab
-                            tabs.add(
-                                'event',
-                                {
-                                    icon: "activity",
-                                    label: builder.Locale.get("Activity"),
-                                },
-                                function(tab,nav){
-                                    self._builder.Widget("events",tab,{data: self._data.dependencies.event ?? {},targetTable: 'processes',targetId: self._properties.data});
-                                },
-                            );
-                        }
-
-                        // Relationship
-                        if(self._data.extensions.includes('relationship')){
-
-                            // Create the Relationship widget
-                            self._builder.Widget("related",self._component.grid.col1,{data: self._data.dependencies.relationship ?? {},targetTable: 'process',targetId: self._properties.data});
-                        }
                     }
-                );
-            },
+
+                    // Event
+                    if(self._data.extensions.includes('event')){
+
+                        // Add the Event tab
+                        tabs.add(
+                            'event',
+                            {
+                                icon: "activity",
+                                label: builder.Locale.get("Activity"),
+                            },
+                            function(tab,nav){
+                                self._builder.Widget("events",tab,{data: self._data.dependencies.event ?? {},targetTable: 'processes',targetId: self._properties.data});
+                            },
+                        );
+                    }
+
+                    // Relationship
+                    if(self._data.extensions.includes('relationship')){
+
+                        // Create the Relationship widget
+                        self._builder.Widget("related",self._component.grid.col1,{data: self._data.dependencies.relationship ?? {},targetTable: 'process',targetId: self._properties.data});
+                    }
+                }
+            );
         });
     }
 
@@ -1184,24 +1138,17 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                         modal.spinner(true);
 
                         // AJAX Request
-                        $.ajax({
-                            url: '/api/process/update?id='+self._properties.data,
-                            headers: {'X-CSRF-Authorization': CSRF_KEY},
-                            type: 'POST',dataType: 'json',
-                            data: self._component.grid.meta.form.val(),
-                            error: function(xhr, status, error) {
-                                console.error('Error updating process:', error);
-                            },
-                            success: function(response) {
+                        API.endpoint('/process/update?id='+self._properties.data).data(self._component.grid.meta.form.val()).execute(function(response){
 
-                                // Check if a callback is provided
-                                if (typeof callback === 'function') {
-                                    callback(response);
-                                }
-
-                                // Close the modal
-                                modal.hide();
+                            // Check if a callback is provided
+                            if (typeof callback === 'function') {
+                                callback(response);
                             }
+
+                            // Close the modal
+                            modal.hide();
+                        },function(xhr, status, error){
+                            modal.hide();
                         });
                     },
                 },
@@ -1234,22 +1181,17 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                         modal.spinner(true);
 
                         // AJAX Request
-                        $.ajax({
-                            url: '/api/tasks/upgrade?id=' + self._properties.data,
-                            type: 'GET',dataType: 'json',
-                            error: function(xhr, status, error) {
-                                console.error('Error updating tasks:', error);
-                            },
-                            success: function(response) {
+                        API.endpoint('/tasks/upgrade?id=' + self._properties.data).execute(function(response){
 
-                                // Check if a callback is provided
-                                if (typeof callback === 'function') {
-                                    callback(response);
-                                }
-
-                                // Close the modal
-                                modal.hide();
+                            // Check if a callback is provided
+                            if (typeof callback === 'function') {
+                                callback(response);
                             }
+
+                            // Close the modal
+                            modal.hide();
+                        },function(xhr, status, error){
+                            modal.hide();
                         });
                     },
                 },
