@@ -380,16 +380,8 @@ const ProcessTree = function(taskRecord, groupContainer = null, listContainer = 
     // Function to save the process tree
     function save(){
         console.log(process,current);
-        $.ajax({
-            url: '/api/tasks/update?id=' + taskRecord.id,
-            headers: {'X-CSRF-Authorization': CSRF_KEY},
-            type: 'POST',dataType: 'json',
-            data: {process: process, progress: current},
-            success: function(response) {
-
-                // Render the list
-                render();
-            },
+        API.endpoint('/tasks/update?id=' + taskRecord.id).data({process: process, progress: current}).execute(function(response){
+            render();
         });
     }
 
@@ -444,104 +436,96 @@ const ProcessDetails = function(process, container){
     details.edit = function(){
 
         // AJAX Request
-        $.ajax({
-            url: '/api/process/meta',
-            type: 'GET',dataType: 'json',
-            success: function(response) {
+        API.endpoint('/process/meta').execute(function(response){
 
-                // Create a modal
-                builder.Component(
-                    "modal",
-                    {
-                        callback: {
-                            submit: function(element,modal){
-                                element.form.submit();
+            // Create a modal
+            builder.Component(
+                "modal",
+                {
+                    callback: {
+                        submit: function(element,modal){
+                            element.form.submit();
+                        },
+                    },
+                    icon: "pencil-square",
+                    title: "Edit Process's Details",
+                    size: 'xl',
+                },
+                function(modal,component){
+
+                    // Save Modal Component for select2 fields
+                    const componentModal = component;
+
+                    // Styling
+                    component.addClass('modal-warning');
+                    component.footer.submit.text('Apply changes').addClass('btn-success').removeClass('btn-link');
+                    component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-circle me-1').prependTo(component.footer.submit);
+
+                    // Create Form
+                    component.form = builder.Component(
+                        'form',
+                        component.body,
+                        {
+                            class:{
+                                form: 'row g-3',
+                                field: 'col-12',
+                            },
+                            callback:{
+                                submit: function(form){
+
+                                    // AJAX Request
+                                    API.endpoint('/process/update?id=' + process.id).data(form.val()).execute(function(response){
+
+                                        // Loop through the process to update the details
+                                        for(const [key, value] of Object.entries(response.record)){
+
+                                            // Set value to Process
+                                            process[key] = value;
+
+                                            // Update the table
+                                            if(typeof details.rows[key] !== 'undefined'){
+                                                details.rows[key].value = value;
+                                                details.rows[key].td.text(value);
+                                            }
+                                        }
+
+                                        // Close the modal
+                                        modal.hide();
+                                    },function(xhr, status, error){
+                                        modal.hide();
+                                    });
+                                },
                             },
                         },
-                        icon: "pencil-square",
-                        title: "Edit Process's Details",
-                        size: 'xl',
-                    },
-                    function(modal,component){
+                        function(form,component){
 
-                        // Save Modal Component for select2 fields
-                        const componentModal = component;
+                            // Loop through the process to add the details
+                            for(const [key, value] of Object.entries(process)){
 
-                        // Styling
-                        component.addClass('modal-warning');
-                        component.footer.submit.text('Apply changes').addClass('btn-success').removeClass('btn-link');
-                        component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-circle me-1').prependTo(component.footer.submit);
+                                // Check if the key is in the list of keys to ignore
+                                if(jQuery.inArray(key, ["category","description","targetTable"]) !== -1){
 
-                        // Create Form
-                        component.form = builder.Component(
-                            'form',
-                            component.body,
-                            {
-                                class:{
-                                    form: 'row g-3',
-                                    field: 'col-12',
-                                },
-                                callback:{
-                                    submit: function(form){
-
-                                        // AJAX Request
-                                        $.ajax({
-                                            url: '/api/process/update?id=' + process.id,
-                                            headers: {'X-CSRF-Authorization': CSRF_KEY},
-                                            type: 'POST',dataType: 'json',
-                                            data: form.val(),
-                                            success: function(response) {
-
-                                                // Loop through the process to update the details
-                                                for(const [key, value] of Object.entries(response.record)){
-
-                                                    // Set value to Process
-                                                    process[key] = value;
-
-                                                    // Update the table
-                                                    if(typeof details.rows[key] !== 'undefined'){
-                                                        details.rows[key].value = value;
-                                                        details.rows[key].td.text(value);
-                                                    }
-                                                }
-
-                                                // Close the modal
-                                                modal.hide();
-                                            }
-                                        });
-                                    },
-                                },
-                            },
-                            function(form,component){
-
-                                // Loop through the process to add the details
-                                for(const [key, value] of Object.entries(process)){
-
-                                    // Check if the key is in the list of keys to ignore
-                                    if(jQuery.inArray(key, ["category","description","targetTable"]) !== -1){
-
-                                        // Create a field
-                                        form.add(
-                                            {
-                                                name: key,
-                                                label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
-                                                icon: 'input-cursor-text',
-                                                type: (key == 'description') ? 'textarea' : 'select',
-                                                options: response[key] ?? [],
-                                                modal: componentModal,
-                                                value: process[key],
-                                            }
-                                        );
-                                    }
+                                    // Create a field
+                                    form.add(
+                                        {
+                                            name: key,
+                                            label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'),
+                                            icon: 'input-cursor-text',
+                                            type: (key == 'description') ? 'textarea' : 'select',
+                                            options: response[key] ?? [],
+                                            modal: componentModal,
+                                            value: process[key],
+                                        }
+                                    );
                                 }
+                            }
 
-                                // Open the modal
-                                modal.show();
-                            },
-                        );
-                    },
-                );
-            },
+                            // Open the modal
+                            modal.show();
+                        },
+                    );
+                },
+            );
         });
     }
 
@@ -699,84 +683,75 @@ const ProcessEditor = function(process, container){
                             spinner.removeClass('d-none');
 
                             // AJAX Request
-                            $.ajax({
-                                url: '/api/process/update?id=' + process.id,
-                                headers: {'X-CSRF-Authorization': CSRF_KEY},
-                                type: 'POST',dataType: 'json',
-                                data: {process: processJSON},
-                                success: function(response) {
+                            API.endpoint('/process/update?id=' + process.id).data({process: processJSON}).execute(function(response){
 
-                                    // Close the modal
-                                    modal.hide();
+                                // Close the modal
+                                modal.hide();
 
-                                    // Create a modal
-                                    builder.Component(
-                                        "modal",
-                                        null,
-                                        {
-                                            onEnter: false,
-                                            destroy: true,
-                                            icon: "question-circle",
-                                            title: builder.Locale.get("Do you?"),
-                                            body: builder.Locale.get("Do you want to apply the changes to existing tasks? This will update the tasks with the new process details. Although it may reset some of the progress."),
-                                            cancel: false,
-                                            submit: true,
-                                            callback: {
-                                                submit: function(element,modal){
+                                // Create a modal
+                                builder.Component(
+                                    "modal",
+                                    null,
+                                    {
+                                        onEnter: false,
+                                        destroy: true,
+                                        icon: "question-circle",
+                                        title: builder.Locale.get("Do you?"),
+                                        body: builder.Locale.get("Do you want to apply the changes to existing tasks? This will update the tasks with the new process details. Although it may reset some of the progress."),
+                                        cancel: false,
+                                        submit: true,
+                                        callback: {
+                                            submit: function(element,modal){
 
-                                                    // Create a spinner animate-rotate
-                                                    var spinner = $(document.createElement('div')).attr({
-                                                        "class": "animate-rotate rounded-circle border border-secondary border-4 d-none",
-                                                        "style": "width: 96px; height: 96px; border-top-color: var(--bs-primary)!important;",
-                                                    }).appendTo(element);
+                                                // Create a spinner animate-rotate
+                                                var spinner = $(document.createElement('div')).attr({
+                                                    "class": "animate-rotate rounded-circle border border-secondary border-4 d-none",
+                                                    "style": "width: 96px; height: 96px; border-top-color: var(--bs-primary)!important;",
+                                                }).appendTo(element);
+
+                                                // Hide the dialog
+                                                element.dialog.addClass('opacity-0');
+
+                                                // Setup a spinner while waiting for the modal to be submitted
+                                                setTimeout(() => {
 
                                                     // Hide the dialog
-                                                    element.dialog.addClass('opacity-0');
+                                                    element.dialog.hide();
 
-                                                    // Setup a spinner while waiting for the modal to be submitted
-                                                    setTimeout(() => {
+                                                    // Add flex to the modal
+                                                    element.addClass('d-flex align-items-center justify-content-center');
 
-                                                        // Hide the dialog
-                                                        element.dialog.hide();
+                                                    // Show the spinner
+                                                    spinner.removeClass('d-none');
 
-                                                        // Add flex to the modal
-                                                        element.addClass('d-flex align-items-center justify-content-center');
-
-                                                        // Show the spinner
-                                                        spinner.removeClass('d-none');
-
-                                                        // AJAX Request
-                                                        $.ajax({
-                                                            url: '/api/tasks/upgrade?id=' + process.id,
-                                                            type: 'GET',dataType: 'json',
-                                                            success: function(response) {
-                                                                console.log(response);
-
-                                                                // Close the modal
-                                                                modal.hide();
-                                                            }
-                                                        });
-                                                    }, 300);
-                                                },
+                                                    // AJAX Request
+                                                    API.endpoint('/tasks/upgrade?id=' + process.id).execute(function(response){
+                                                        modal.hide();
+                                                    },function(xhr, status, error){
+                                                        modal.hide();
+                                                    });
+                                                }, 300);
                                             },
                                         },
-                                        function(modal,component){
+                                    },
+                                    function(modal,component){
 
-                                            // Save the component
-                                            const componentModal = component;
+                                        // Save the component
+                                        const componentModal = component;
 
-                                            // Style the modal
-                                            component.addClass('modal-warning');
-                                            component.footer.submit.addClass('btn-warning').removeClass('btn-link').attr({
-                                                "style": "border-bottom-right-radius: var(--bs-modal-inner-border-radius) !important;border-bottom-left-radius: var(--bs-modal-inner-border-radius) !important;",
-                                            }).text(builder.Locale.get('Apply Changes'));
-                                            component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-lg me-1').prependTo(component.footer.submit);
+                                        // Style the modal
+                                        component.addClass('modal-warning');
+                                        component.footer.submit.addClass('btn-warning').removeClass('btn-link').attr({
+                                            "style": "border-bottom-right-radius: var(--bs-modal-inner-border-radius) !important;border-bottom-left-radius: var(--bs-modal-inner-border-radius) !important;",
+                                        }).text(builder.Locale.get('Apply Changes'));
+                                        component.footer.submit.icon = $(document.createElement('i')).addClass('bi bi-check-lg me-1').prependTo(component.footer.submit);
 
-                                            // Open the modal
-                                            modal.show();
-                                        },
-                                    );
-                                }
+                                        // Open the modal
+                                        modal.show();
+                                    },
+                                );
+                            },function(xhr, status, error){
+                                modal.hide();
                             });
                         }, 300);
                     },
