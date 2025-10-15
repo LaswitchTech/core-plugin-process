@@ -50,10 +50,8 @@ class ProcessModel extends BaseModel {
             ->table($this->table)
             ->select('*')
             ->join('owner', 'users', 'username')
-            ->join('organization', 'organizations', 'id')
             ->filter()
-            ->where('id', 9999, '<>')
-            ->where('organization', $this->Auth->user()->organization()->id);
+            ->where('id', 9999, '<>');
 
         // Check if the conditions are empty
         if(!empty($conditions)){
@@ -104,7 +102,6 @@ class ProcessModel extends BaseModel {
             ->table($this->table)
             ->select('*')
             ->join('owner', 'users', 'username')
-            ->join('organization', 'organizations', 'id')
             ->index($this->primary)
             ->filter()
             ->where('id', 9999, '<>')
@@ -140,10 +137,9 @@ class ProcessModel extends BaseModel {
             ->table($this->table)
             ->select('*')
             ->join('owner', 'users', 'username')
-            ->join('organization', 'organizations', 'id')
+            ->order('id', 'DESC')
             ->filter()
             ->where('id', 9999, '<>')
-            ->where('organization', $this->Auth->user()->organization()->id)
             ->filter()
             ->where('targetTable', $table)
             ->limit(1);
