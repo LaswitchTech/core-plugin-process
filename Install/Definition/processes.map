@@ -56,14 +56,6 @@
         "Extra": ""
     },
     "7": {
-        "Field": "organization",
-        "Type": "bigint(20)",
-        "Null": "YES",
-        "Key": "",
-        "Default": null,
-        "Extra": ""
-    },
-    "8": {
         "Field": "targetTable",
         "Type": "varchar(255)",
         "Null": "NO",
