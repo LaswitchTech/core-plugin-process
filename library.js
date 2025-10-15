@@ -930,6 +930,7 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                                                     values.value = values.value ?? null;
                                                     values.cost = parseInt(values.cost);
                                                     values.emphasize = values.emphasize ?? null;
+                                                    values.isDisabled = (values.isDisabled === true || values.isDisabled === 1 || values.isDisabled === '1' || values.isDisabled === 'true') ? true : false;
                                                     return values;
                                                 },
                                                 submit: function(formTask){
@@ -1272,7 +1273,7 @@ builder.add('widgets','processEditor', class extends builder.ComponentClass {
                 value: this._process[this._current.stage].tasks[this._current.task].value ?? '',
                 cost: this._process[this._current.stage].tasks[this._current.task].cost ?? '',
                 emphasize: this._process[this._current.stage].tasks[this._current.task].emphasize ?? '',
-                isDisabled: this._process[this._current.stage].tasks[this._current.task].isDisabled ?? false,
+                isDisabled: (this._process[this._current.stage].tasks[this._current.task].isDisabled === true || this._process[this._current.stage].tasks[this._current.task].isDisabled === 1 || this._process[this._current.stage].tasks[this._current.task].isDisabled === '1' || this._process[this._current.stage].tasks[this._current.task].isDisabled === 'true') ? true : false,
             });
         }
 
