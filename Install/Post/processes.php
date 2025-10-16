@@ -13,8 +13,22 @@ class ProcessesPostModel extends ProcessModel {
     public function post($record): array
     {
         // Check if the record ID is below 9999
-        if($record['id'] > 9999) return $record;
+        if($record['id'] <= 9999) return [];
 
-        return [];
+        // Loop through the record
+        foreach($record as $key => $value){
+
+            // Handle specific fields
+            switch($key){
+                case 'organization':
+                    unset($record[$key]);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Return the record
+        return $record;
     }
 }
