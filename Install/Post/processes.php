@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../Model.php';
+require_once realpath(__DIR__ . '/../../Model.php');
 
 class ProcessesPostModel extends ProcessModel {
 
