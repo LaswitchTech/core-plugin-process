@@ -5,7 +5,7 @@
             builder.Layout('index',"#layout",{
                 url: '/api/process/fetchAll',
                 dblclick: function(event, table, dt, node, data){
-                    window.location.href = "/plugin/process/editor?id=" + data.id + "&name=" + encodeURIComponent(data.category);
+                    window.location.href = "/library/process/editor?id=" + data.id + "&name=" + encodeURIComponent(data.category);
                 },
                 selectTools: false,
                 actions: {
@@ -13,7 +13,7 @@
                         label:'Details',
                         icon:'eye',
                         action:function(event, table, dt, node, row, data){
-                            window.location.href = "/plugin/process/editor?id=" + data.id + "&name=" + encodeURIComponent(data.category);
+                            window.location.href = "/library/process/editor?id=" + data.id + "&name=" + encodeURIComponent(data.category);
                         }
                     },
                 },
